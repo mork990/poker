@@ -72,20 +72,26 @@
   const API_KEY = "XOLV8M-5rQ8mnTObVi0_YjbfiDx45Y2OCjyG7KOfIzA";
   const POLL_INTERVAL_MS = 30000;
 
+  // CORS Proxy - מעקפת חסימות CORS של OpenPoker
+  const PROXY = "https://corsproxy.io/?url=";
+
   let seasonEndDate = null;
 
   async function fetchSeason() {
     try {
-      const r = await fetch("https://api.openpoker.ai/api/season/current");
+      const url = PROXY + encodeURIComponent("https://api.openpoker.ai/api/season/current");
+      const r = await fetch(url);
       const data = await r.json();
       seasonEndDate = new Date(data.end_date);
       document.getElementById("season-sub").textContent = `Season ${data.season_number}`;
+      console.log("Season loaded:", data);
     } catch (e) { console.error("season fetch failed", e); }
   }
 
   async function fetchMyRank() {
     try {
-      const r = await fetch("https://api.openpoker.ai/api/season/me", {
+      const url = PROXY + encodeURIComponent("https://api.openpoker.ai/api/season/me");
+      const r = await fetch(url, {
         headers: { "Authorization": `Bearer ${API_KEY}` }
       });
       if (!r.ok) {
@@ -95,6 +101,7 @@
       const data = await r.json();
       document.getElementById("rank").textContent = `#${data.rank ?? "--"}`;
       document.getElementById("rank-sub").textContent = `out of ${data.total_participants ?? "--"}`;
+      console.log("Rank loaded:", data);
     } catch (e) { console.error("rank fetch failed", e); }
   }
 
