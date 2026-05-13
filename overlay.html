@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<title>Open Poker Overlay</title>
+<style>
+  body {
+    margin: 0;
+    background: transparent;
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    color: #fff;
+    overflow: hidden;
+  }
+  .card {
+    position: absolute;
+    background: linear-gradient(135deg, rgba(20,30,50,0.92), rgba(40,55,90,0.92));
+    border: 2px solid rgba(120,200,255,0.5);
+    border-radius: 18px;
+    padding: 20px 32px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+    text-align: center;
+  }
+  .label {
+    font-size: 18px;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    color: #8fc8ff;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .value {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .sub {
+    font-size: 20px;
+    color: #b8c8e0;
+    margin-top: 6px;
+  }
+  #timer-card {
+    top: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 400px;
+  }
+  #rank-card {
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 400px;
+  }
+  #rank-card .value { color: #ffd166; }
+</style>
+</head>
+<body>
+
+<div class="card" id="timer-card">
+  <div class="label">Tournament Ends In</div>
+  <div class="value" id="timer">--:--:--</div>
+  <div class="sub" id="season-sub">Season --</div>
+</div>
+
+<div class="card" id="rank-card">
+  <div class="label">My Rank</div>
+  <div class="value" id="rank">--</div>
+  <div class="sub" id="rank-sub">out of --</div>
+</div>
+
+<script>
+  const API_KEY = "XOLV8M-5rQ8mnTObVi0_YjbfiDx45Y2OCjyG7KOfIzA";
+  const POLL_INTERVAL_MS = 30000;
+
+  let seasonEndDate = null;
+
+  async function fetchSeason() {
+    try {
+      const r = await fetch("https://api.openpoker.ai/api/season/current");
+      const data = await r.json();
+      seasonEndDate = new Date(data.end_date);
+      document.getElementById("season-sub").textContent = `Season ${data.season_number}`;
+    } catch (e) { console.error("season fetch failed", e); }
+  }
+
+  async function fetchMyRank() {
+    try {
+      const r = await fetch("https://api.openpoker.ai/api/season/me", {
+        headers: { "Authorization": `Bearer ${API_KEY}` }
+      });
+      if (!r.ok) {
+        console.error("rank fetch HTTP error:", r.status);
+        return;
+      }
+      const data = await r.json();
+      document.getElementById("rank").textContent = `#${data.rank ?? "--"}`;
+      document.getElementById("rank-sub").textContent = `out of ${data.total_participants ?? "--"}`;
+    } catch (e) { console.error("rank fetch failed", e); }
+  }
+
+  function updateTimer() {
+    if (!seasonEndDate) return;
+    const ms = seasonEndDate - new Date();
+    if (ms <= 0) {
+      document.getElementById("timer").textContent = "ENDED!";
+      return;
+    }
+    const d = Math.floor(ms / 86400000);
+    const h = Math.floor((ms % 86400000) / 3600000);
+    const m = Math.floor((ms % 3600000) / 60000);
+    const s = Math.floor((ms % 60000) / 1000);
+    document.getElementById("timer").textContent = d > 0
+      ? `${d}d ${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`
+      : `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+  }
+
+  async function tick() {
+    await Promise.all([fetchSeason(), fetchMyRank()]);
+  }
+
+  tick();
+  setInterval(tick, POLL_INTERVAL_MS);
+  setInterval(updateTimer, 1000);
+</script>
+
+</body>
+</html>
